@@ -87,6 +87,7 @@ public:
 
 private:
     void onKeyStatusError(widevine::Cdm::Status status);
+    void deferredKeyStatusChange();
 
 private:
     widevine::Cdm *m_cdm;

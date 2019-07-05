@@ -30,6 +30,10 @@
 #define NYI_KEYSYSTEM "keysystem-placeholder"
 
 #include <refsw/b_secbuf.h>
+
+#include <functional>
+#include <thread>
+
 struct Rpc_Secbuf_Info {
     uint32_t type;
     size_t   size;
@@ -128,6 +132,11 @@ static const char* widevineKeyStatusToCString(widevine::Cdm::KeyStatus widevineS
 }
 
 void MediaKeySession::onKeyStatusChange()
+{
+    std::thread(std::bind(&MediaKeySession::deferredKeyStatusChange, this)).detach();
+}
+
+void MediaKeySession::deferredKeyStatusChange()
 {
     widevine::Cdm::KeyStatusMap map;
     if (widevine::Cdm::kSuccess != m_cdm->getKeyStatuses(m_sessionId, &map))
