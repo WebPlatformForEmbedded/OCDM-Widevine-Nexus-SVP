@@ -46,6 +46,7 @@ MediaKeySession::MediaKeySession(widevine::Cdm *cdm, int32_t licenseType)
     , m_initDataType(widevine::Cdm::kCenc)
     , m_licenseType((widevine::Cdm::SessionType)licenseType)
     , m_sessionId("")
+    , m_TokenHandle(nullptr)
     , m_pNexusMemory(nullptr)
     , m_NexusMemorySize(512 * 1024) {
 
@@ -361,8 +362,8 @@ CDMi_RESULT MediaKeySession::Decrypt(
     return status;
   }
 
-  NEXUS_MemoryBlockTokenHandle pToken = NEXUS_MemoryBlock_CreateToken(pNexusMemoryBlock);
-  if (!pToken) {
+  m_TokenHandle = NEXUS_MemoryBlock_CreateToken(pNexusMemoryBlock);
+  if (!m_TokenHandle) {
 
     printf("Could not create a token for another process");
     NEXUS_MemoryBlock_Unlock(pNexusMemoryBlock);
@@ -409,8 +410,8 @@ CDMi_RESULT MediaKeySession::Decrypt(
   }
 
   // Return clear content.
-  *f_pcbOpaqueClearContent = sizeof(pToken);
-  *f_ppbOpaqueClearContent = reinterpret_cast<uint8_t*>(&pToken);
+  *f_pcbOpaqueClearContent = sizeof(m_TokenHandle);
+  *f_ppbOpaqueClearContent = reinterpret_cast<uint8_t*>(&m_TokenHandle);
 
   NEXUS_MemoryBlock_Unlock(pNexusMemoryBlock);
   NEXUS_MemoryBlock_Free(pNexusMemoryBlock);
@@ -424,11 +425,6 @@ CDMi_RESULT MediaKeySession::ReleaseClearContent(
     uint32_t f_cbSessionKey,
     const uint32_t  f_cbClearContentOpaque,
     uint8_t  *f_pbClearContentOpaque ){
-  CDMi_RESULT ret = CDMi_S_FALSE;
-  if (f_pbClearContentOpaque) {
-    free(f_pbClearContentOpaque);
-    ret = CDMi_SUCCESS;
-  }
-  return ret;
+  return CDMi_SUCCESS;
 }
 }  // namespace CDMi
