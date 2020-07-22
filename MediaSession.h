@@ -20,6 +20,8 @@
 #include <cdm.h>
 #include <cdmi.h>
 
+#include <nexus_memory.h>
+
 namespace CDMi
 {
 class MediaKeySession : public IMediaKeySession
@@ -97,6 +99,7 @@ private:
     std::string m_sessionId;
     IMediaKeySessionCallback *m_piCallback;
     uint8_t m_IV[16];
+    NEXUS_MemoryBlockTokenHandle m_TokenHandle;
     void *m_pNexusMemory;
     uint32_t m_NexusMemorySize;
 };
