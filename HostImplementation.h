@@ -25,9 +25,6 @@
 
 #include <core/core.h>
 
-extern uint8_t* kDeviceCert;
-extern size_t kDeviceCertSize;
-
 namespace CDMi {
 
 class HostImplementation : 
@@ -36,8 +33,6 @@ class HostImplementation :
   public widevine::Cdm::ITimer {
 
 private:
-  HostImplementation(HostImplementation&) = delete;
-  HostImplementation& operator= (HostImplementation&) = delete;
 
   typedef std::map<std::string, std::string> StorageMap;
 
@@ -78,17 +73,14 @@ private:
 
 public:
   HostImplementation();
-  ~HostImplementation ();
+  ~HostImplementation() override;
+  HostImplementation(HostImplementation&) = delete;
+  HostImplementation& operator= (HostImplementation&) = delete;
 
 public:
-  //
-  // Add methods for testing purpose. No real-life functionality.
-  void Reset();
-  int NumTimers() const;
-  inline void SaveProvisioningInformation() { 
-    _saveDeviceCert = true; 
-  }
- 
+
+  void PreloadFile(const std::string& filename, string&& filecontent);
+
   // widevine::Cdm::IStorage implementation
   // ---------------------------------------------------------------------------
   virtual bool read(const std::string& name, std::string* data) OVERRIDE;
@@ -108,7 +100,6 @@ public:
   virtual void cancel(IClient* client) OVERRIDE;
 
 private:
-  bool _saveDeviceCert;
   WPEFramework::Core::TimerType<Timer> _timer;
   StorageMap _files;
 };

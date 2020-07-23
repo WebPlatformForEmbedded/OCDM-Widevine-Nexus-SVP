@@ -27,9 +27,6 @@
 #include <nexus_config.h>
 #include <nxclient.h>
 
-uint8_t* kDeviceCert = nullptr;
-size_t kDeviceCertSize = 0;
-
 using namespace WPEFramework;
 
 namespace CDMi {
@@ -39,6 +36,8 @@ class WideVine : public IMediaKeys, public widevine::Cdm::IEventListener
 private:
     WideVine (const WideVine&) = delete;
     WideVine& operator= (const WideVine&) = delete;
+
+    static constexpr char _certificateFilename[] = {"cert.bin"};
 
     typedef std::map<std::string, MediaKeySession*> SessionMap;
 
@@ -70,7 +69,7 @@ public:
   
     }
 
-    virtual ~WideVine() {
+    ~WideVine() override {
         _adminLock.Lock();
 
         SessionMap::iterator index (_sessions.begin());
@@ -86,12 +85,6 @@ public:
 
         if (_cdm != nullptr) {
             delete _cdm;
-        }
-
-        if (kDeviceCert != nullptr) {
-            delete [] kDeviceCert;
-            kDeviceCert = nullptr;
-            kDeviceCertSize = 0;
         }
     }
 
@@ -126,13 +119,6 @@ public:
 
         // widevine::Cdm::DeviceCertificateRequest cert_request;
 
-        if (widevine::Cdm::kSuccess == widevine::Cdm::initialize(
-                widevine::Cdm::kOpaqueHandle, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(0))) {
-	    // Setting the last parameter to true, requres serviceCertificates so the requests can be encrypted. Currently badly supported
-            // in the EME tests, so turn of for now :-)
-            _cdm = widevine::Cdm::create(this, &_host, false);
-        }
-        
         Config config;
         config.FromString(configline);
 
@@ -142,15 +128,19 @@ public:
             if(dataBuffer.IsValid() == false) {
                 TRACE_L1(_T("Failed to open %s"), config.Certificate.Value().c_str());
             } else {
-                kDeviceCertSize = dataBuffer.Size();
-                kDeviceCert = new uint8_t[kDeviceCertSize];
-
-                ::memcpy(kDeviceCert, dataBuffer.Buffer(), dataBuffer.Size());
+                _host.PreloadFile(_certificateFilename,  std::string(reinterpret_cast<const char*>(dataBuffer.Buffer()), dataBuffer.Size()));
             }
         }
+
+        if (widevine::Cdm::kSuccess == widevine::Cdm::initialize(
+                widevine::Cdm::kOpaqueHandle, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(4))) {
+	    // Setting the last parameter to true, requres serviceCertificates so the requests can be encrypted. Currently badly supported
+            // in the EME tests, so turn of for now :-)
+            _cdm = widevine::Cdm::create(this, &_host, false);
+        }     
     }
 
-    virtual CDMi_RESULT CreateMediaKeySession(
+    CDMi_RESULT CreateMediaKeySession(
         const string& /* keySystem */,
         int32_t licenseType,
         const char *f_pwszInitDataType,
@@ -158,7 +148,7 @@ public:
         uint32_t f_cbInitData,
         const uint8_t *f_pbCDMData,
         uint32_t f_cbCDMData,
-        IMediaKeySession **f_ppiMediaKeySession) {
+        IMediaKeySession **f_ppiMediaKeySession) override {
 
         CDMi_RESULT dr = CDMi_S_FALSE;
         *f_ppiMediaKeySession = nullptr;
@@ -185,9 +175,9 @@ public:
         return dr;
     }
 
-    virtual CDMi_RESULT SetServerCertificate(
+    CDMi_RESULT SetServerCertificate(
         const uint8_t *f_pbServerCertificate,
-        uint32_t f_cbServerCertificate) {
+        uint32_t f_cbServerCertificate) override {
 
         CDMi_RESULT dr = CDMi_S_FALSE;
 
@@ -198,8 +188,8 @@ public:
         return dr;
     }
 
-    virtual CDMi_RESULT DestroyMediaKeySession(
-        IMediaKeySession *f_piMediaKeySession) {
+    CDMi_RESULT DestroyMediaKeySession(
+        IMediaKeySession *f_piMediaKeySession) override {
 
         std::string sessionId (f_piMediaKeySession->GetSessionId());
 
@@ -221,9 +211,9 @@ public:
         return CDMi_SUCCESS;
     }
 
-    virtual void onMessage(const std::string& session_id,
+    void onMessage(const std::string& session_id,
         widevine::Cdm::MessageType f_messageType,
-        const std::string& f_message) {
+        const std::string& f_message) override {
 
         _adminLock.Lock();
 
@@ -233,10 +223,11 @@ public:
 
         _adminLock.Unlock();
     }
+
 #ifdef USE_CENC14
-    virtual void onKeyStatusesChange(const std::string& session_id,  bool has_new_usable_key) 
+    void onKeyStatusesChange(const std::string& session_id,  bool has_new_usable_key) override
 #else
-    virtual void onKeyStatusesChange(const std::string& session_id)
+    void onKeyStatusesChange(const std::string& session_id) override
 #endif    
     {
 
@@ -249,7 +240,7 @@ public:
         _adminLock.Unlock();
     }
 
-    virtual void onRemoveComplete(const std::string& session_id) {
+    void onRemoveComplete(const std::string& session_id) override {
 
         _adminLock.Lock();
 
@@ -261,7 +252,7 @@ public:
     }
 
     // Called when a deferred action has completed.
-    virtual void onDeferredComplete(const std::string& session_id, widevine::Cdm::Status result) {
+    void onDeferredComplete(const std::string& session_id, widevine::Cdm::Status result) override {
 
         _adminLock.Lock();
 
@@ -273,7 +264,7 @@ public:
     }
 
     // Called when the CDM requires a new device certificate
-    virtual void onDirectIndividualizationRequest(const std::string& session_id, const std::string& request) {
+    void onDirectIndividualizationRequest(const std::string& session_id, const std::string& request) override {
 
         _adminLock.Lock();
 
@@ -290,6 +281,8 @@ private:
     HostImplementation _host;
     SessionMap _sessions;
 };
+
+constexpr char WideVine::_certificateFilename[];
 
 static SystemFactoryType<WideVine> g_instance({"video/webm", "video/mp4", "audio/webm", "audio/mp4"});
 
