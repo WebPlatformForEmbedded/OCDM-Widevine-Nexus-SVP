@@ -21,7 +21,6 @@
 #define WIDEVINE_HOST_IMPLEMENTATION_H
 
 #include "cdm.h"
-#include "override.h"
 
 #include <core/core.h>
 
@@ -83,21 +82,21 @@ public:
 
   // widevine::Cdm::IStorage implementation
   // ---------------------------------------------------------------------------
-  virtual bool read(const std::string& name, std::string* data) OVERRIDE;
-  virtual bool write(const std::string& name, const std::string& data) OVERRIDE;
-  virtual bool exists(const std::string& name) OVERRIDE;
-  virtual bool remove(const std::string& name) OVERRIDE;
-  virtual int32_t size(const std::string& name) OVERRIDE;
-  virtual bool list(std::vector<std::string>* names) OVERRIDE;
+  bool read(const std::string& name, std::string* data) override;
+  bool write(const std::string& name, const std::string& data) override;
+  bool exists(const std::string& name) override;
+  bool remove(const std::string& name) override;
+  int32_t size(const std::string& name) override;
+  bool list(std::vector<std::string>* names) override;
 
   // widevine::Cdm::IClock implementation
   // ---------------------------------------------------------------------------
-  virtual int64_t now() OVERRIDE;
+  int64_t now() override;
 
   // widevine::Cdm::ITimer implementation
   // ---------------------------------------------------------------------------
-  virtual void setTimeout(int64_t delay_ms, IClient* client, void* context) OVERRIDE;
-  virtual void cancel(IClient* client) OVERRIDE;
+  void setTimeout(int64_t delay_ms, IClient* client, void* context) override;
+  void cancel(IClient* client) override;
 
 private:
   WPEFramework::Core::TimerType<Timer> _timer;

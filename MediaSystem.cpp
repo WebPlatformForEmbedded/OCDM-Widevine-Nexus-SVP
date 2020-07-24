@@ -133,7 +133,7 @@ public:
         }
 
         if (widevine::Cdm::kSuccess == widevine::Cdm::initialize(
-                widevine::Cdm::kOpaqueHandle, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(4))) {
+                widevine::Cdm::kOpaqueHandle, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(-1))) {
 	    // Setting the last parameter to true, requres serviceCertificates so the requests can be encrypted. Currently badly supported
             // in the EME tests, so turn of for now :-)
             _cdm = widevine::Cdm::create(this, &_host, false);
@@ -182,9 +182,16 @@ public:
         CDMi_RESULT dr = CDMi_S_FALSE;
 
         std::string serverCertificate(reinterpret_cast<const char*>(f_pbServerCertificate), f_cbServerCertificate);
+
+#ifdef USE_CENC15
+        if (widevine::Cdm::kSuccess == _cdm->setServiceCertificate(widevine::Cdm::ServiceRole::kAllServices, serverCertificate)) {
+            dr = CDMi_SUCCESS;
+        }
+#else
         if (widevine::Cdm::kSuccess == _cdm->setServiceCertificate(serverCertificate)) {
             dr = CDMi_SUCCESS;
         }
+#endif   
         return dr;
     }
 
@@ -224,7 +231,7 @@ public:
         _adminLock.Unlock();
     }
 
-#ifdef USE_CENC14
+#if defined (USE_CENC14) || defined (USE_CENC15)
     void onKeyStatusesChange(const std::string& session_id,  bool has_new_usable_key) override
 #else
     void onKeyStatusesChange(const std::string& session_id) override
@@ -264,7 +271,7 @@ public:
     }
 
     // Called when the CDM requires a new device certificate
-    void onDirectIndividualizationRequest(const std::string& session_id, const std::string& request) override {
+    virtual void onDirectIndividualizationRequest(const std::string& session_id, const std::string& request) {
 
         _adminLock.Lock();
 
