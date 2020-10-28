@@ -48,8 +48,16 @@ private:
         Config()
             : Core::JSON::Container()
             , Certificate()
+            , Product()
+            , Company()
+            , Model()
+            , Device()
         {
             Add(_T("certificate"), &Certificate);
+            Add(_T("product"), &Product);
+            Add(_T("company"), &Company);
+            Add(_T("model"), &Model);
+            Add(_T("device"), &Device);
         }
         ~Config()
         {
@@ -57,6 +65,10 @@ private:
 
     public:
         Core::JSON::String Certificate;
+        Core::JSON::String Product;
+        Core::JSON::String Company;
+        Core::JSON::String Model;
+        Core::JSON::String Device;
     };
 
 
@@ -99,13 +111,35 @@ public:
         DEBUG_VARIABLE(rc);
         widevine::Cdm::ClientInfo client_info;
 
+        Config config;
+        config.FromString(configline);
+
         // Set client info that denotes this as the test suite:
-        client_info.product_name = "WPEFramework";
-        client_info.company_name = "www.metrological.com";
-        client_info.model_name = "www";
+        if (config.Product.IsSet() == true) {
+            client_info.product_name = config.Product.Value();
+        } else {
+            client_info.product_name = "WPEFramework";
+        }
+        
+        if (config.Company.IsSet() == true) {
+            client_info.company_name = config.Company.Value();
+        } else {
+            client_info.company_name = "www.metrological.com";
+        }
+
+        if (config.Model.IsSet() == true) {
+            client_info.model_name = config.Model.Value();
+        } else {
+            client_info.model_name = "reference";
+        }
 
 #if defined(__linux__)
-        client_info.device_name = "Linux";
+        if (config.Device.IsSet() == true) {
+            client_info.device_name = config.Device.Value();
+        } else {
+            client_info.device_name = "Linux";
+        }
+
         {
             struct utsname name;
             if (!uname(&name)) {
@@ -113,14 +147,11 @@ public:
             }
         }
 #else
-        client_info.device_name = "unknown";
+        client_info.device_name = "Unknown";
 #endif
         client_info.build_info = __DATE__;
 
         // widevine::Cdm::DeviceCertificateRequest cert_request;
-
-        Config config;
-        config.FromString(configline);
 
         if (config.Certificate.IsSet() == true) {
             Core::DataElementFile dataBuffer(config.Certificate.Value(), Core::File::USER_READ);
@@ -133,7 +164,7 @@ public:
         }
 
         if (widevine::Cdm::kSuccess == widevine::Cdm::initialize(
-                widevine::Cdm::kOpaqueHandle, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(4))) {
+                widevine::Cdm::kOpaqueHandle, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(-1))) {
 	    // Setting the last parameter to true, requres serviceCertificates so the requests can be encrypted. Currently badly supported
             // in the EME tests, so turn of for now :-)
             _cdm = widevine::Cdm::create(this, &_host, false);
@@ -182,9 +213,16 @@ public:
         CDMi_RESULT dr = CDMi_S_FALSE;
 
         std::string serverCertificate(reinterpret_cast<const char*>(f_pbServerCertificate), f_cbServerCertificate);
+
+#ifdef USE_CENC15
+        if (widevine::Cdm::kSuccess == _cdm->setServiceCertificate(widevine::Cdm::ServiceRole::kAllServices, serverCertificate)) {
+            dr = CDMi_SUCCESS;
+        }
+#else
         if (widevine::Cdm::kSuccess == _cdm->setServiceCertificate(serverCertificate)) {
             dr = CDMi_SUCCESS;
         }
+#endif   
         return dr;
     }
 
@@ -224,7 +262,7 @@ public:
         _adminLock.Unlock();
     }
 
-#ifdef USE_CENC14
+#if defined (USE_CENC14) || defined (USE_CENC15)
     void onKeyStatusesChange(const std::string& session_id,  bool has_new_usable_key) override
 #else
     void onKeyStatusesChange(const std::string& session_id) override
@@ -264,7 +302,7 @@ public:
     }
 
     // Called when the CDM requires a new device certificate
-    void onDirectIndividualizationRequest(const std::string& session_id, const std::string& request) override {
+    virtual void onDirectIndividualizationRequest(const std::string& session_id, const std::string& request) {
 
         _adminLock.Lock();
 
