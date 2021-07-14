@@ -32,6 +32,7 @@ find_package(NXCLIENT)
 find_package(NexusWidevine)
 
 add_library(${DRM_PLUGIN_NAME} SHARED
+    Module.cpp
     HostImplementation.cpp 
     MediaSession.cpp 
     MediaSystem.cpp

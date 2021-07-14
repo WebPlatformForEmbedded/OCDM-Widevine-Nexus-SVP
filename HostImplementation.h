@@ -20,9 +20,9 @@
 #ifndef WIDEVINE_HOST_IMPLEMENTATION_H
 #define WIDEVINE_HOST_IMPLEMENTATION_H
 
-#include "cdm.h"
+#include "Module.h"
 
-#include <core/core.h>
+#include "cdm.h"
 
 namespace CDMi {
 
