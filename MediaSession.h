@@ -17,8 +17,9 @@
 
 #pragma once
 
+#include <interfaces/IDRM.h>
+
 #include <cdm.h>
-#include <cdmi.h>
 
 #include <nexus_memory.h>
 
