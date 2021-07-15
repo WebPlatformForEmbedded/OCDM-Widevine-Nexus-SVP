@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "Module.h"
 
 #include "MediaSession.h"
 #include "HostImplementation.h"
@@ -22,7 +23,6 @@
 #include <iostream>
 #include <sstream>
 #include <sys/utsname.h>
-#include <core/core.h>
 
 #include <nexus_config.h>
 #include <nxclient.h>

@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include "Module.h"
+
 #include "MediaSession.h"
 #include "Policy.h"
 
@@ -26,8 +28,6 @@
 #include <string>
 #include <string.h>
 #include <sys/utsname.h>
-
-#include <core/core.h>
 
 #define NYI_KEYSYSTEM "keysystem-placeholder"
 
